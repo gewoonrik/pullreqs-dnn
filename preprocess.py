@@ -106,6 +106,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     text_map = {}
     label_map = pd.DataFrame(columns=('project_name', 'github_id'))
     file_counter = 0
+    project_names = set(pd.Series.unique(pullreqs['project_name']))
 
     for name in os.listdir(DIFFS_DIR):
         if num_diffs > 0 and file_counter >= num_diffs:
@@ -114,6 +115,10 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
         try:
             owner, repo, github_id = name.split('@')
             project_name = "%s/%s" % (owner, repo)
+
+            if project_name not in project_names:
+                continue
+
             github_id = github_id.split('.')[0]
 
             statinfo = os.stat(os.path.join(DIFFS_DIR, name))
