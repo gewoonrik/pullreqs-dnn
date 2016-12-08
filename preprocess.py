@@ -105,11 +105,12 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
 
     text_map = {}
     label_map = pd.DataFrame(columns=('project_name', 'github_id'))
-    file_counter = 0
+    files_read = files_examined =0
     project_names = set(pd.Series.unique(pullreqs['project_name']))
 
     for name in os.listdir(DIFFS_DIR):
-        if num_diffs > 0 and file_counter >= num_diffs:
+        files_examined += 1
+        if num_diffs > 0 and file_read >= num_diffs:
             break
 
         try:
@@ -129,13 +130,13 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
             label_map = pd.concat([label_map, pd.DataFrame([[project_name, int(github_id)]],
                                                            columns=('project_name', 'github_id'))])
             text_map[name.split('.')[0]] = os.path.join(DIFFS_DIR, name)
-            file_counter += 1
+            files_read += 1
         except:
             pass
 
-        print("%s diffs read" % file_counter, end='\r')
+        print("%s diffs examined, %s diffs read" % (files_examined, files_read) , end='\r')
 
-    print("Loaded %s diffs" % len(text_map))
+    print("\nLoaded %s diffs" % len(text_map))
 
     label_map = pd.merge(label_map, pullreqs, how='left')[['project_name', 'github_id', 'merged']]
     label_map['name'] = label_map[['project_name', 'github_id']].apply(
