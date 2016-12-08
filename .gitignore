@@ -87,3 +87,7 @@ ENV/
 
 # Rope project settings
 .ropeproject
+
+pullreq-patches
+.pynb_checkpoints
+datasets
