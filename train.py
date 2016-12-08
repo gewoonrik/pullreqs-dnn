@@ -1,9 +1,12 @@
 #!/usr/bin/env python
+#
+# (c) 2016 -- onwards Georgios Gousios <gousiosg@gmail.com>
+#
+
 
 import argparse
 import pickle
 import json
-
 
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Activation, Embedding, Bidirectional

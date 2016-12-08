@@ -1,3 +1,7 @@
+#
+# (c) 2016 -- onwards Georgios Gousios <gousiosg@gmail.com>
+#
+
 import pandas as pd
 import time
 import os

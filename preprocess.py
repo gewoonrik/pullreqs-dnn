@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+#
+# (c) 2016 -- onwards Georgios Gousios <gousiosg@gmail.com>
+#
+
 
 from __future__ import print_function
 
