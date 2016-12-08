@@ -1,40 +1,43 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
-import os
+import argparse
 import pickle
-import numpy as np
+import json
+
 
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Activation, Embedding, Bidirectional
+from keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 from config import *
-from preprocess import create_dataset
 
-np.random.seed(1337)
+parser = argparse.ArgumentParser()
+parser.add_argument('--prefix', default='default')
+parser.add_argument('--batch_size', type=int, default=64)
+parser.add_argument('--epochs', type=int, default=10)
+parser.add_argument('--dropout', type=float, default=0.2)
+parser.add_argument('--lstm_output', type=float, default=256)
+parser.add_argument('--embedding_output', type=float, default=512)
+parser.add_argument('--checkpoint', type=bool, default=False)
 
-if not os.path.exists('x_train.pcl') or \
-        not os.path.exists('y_train.pcl') or \
-        not os.path.exists('x_val.pcl') or \
-        not os.path.exists('y_val.pcl'):
-    print("Creating data set")
+args = parser.parse_args()
 
-    x_train, y_train, x_val, y_val = create_dataset()
+print("Loading data set for prefix %s" % args.prefix)
+x_train = pickle.load(open(x_train_file % args.prefix))
+y_train = pickle.load(open(y_train_file % args.prefix))
+x_val = pickle.load(open(x_val_file % args.prefix))
+y_val = pickle.load(open(y_val_file % args.prefix))
+config = pickle.load(open(config_file % args.prefix))
 
-else:
-    print("Loading existing data set")
-    x_train = pickle.load(open('x_train.pcl'))
-    y_train = pickle.load(open('y_train.pcl'))
-    x_val = pickle.load(open('x_val.pcl'))
-    y_val = pickle.load(open('y_val.pcl'))
-
-print("Training on %d merged, %d unmerged PRs" % (y_train[y_train == 1].size, y_train[y_train == 0].size))
+print("Training on %d merged, %d unmerged PRs" % (y_train[y_train == 1].size,
+                                                  y_train[y_train == 0].size))
+config.update(vars(args))
+print("Training configuration:")
+print json.dumps(config, indent=1)
 
 model = Sequential()
-model.add(Embedding(max_features, 512, dropout=0.2))
-# model.add(LSTM(128, dropout_W=0.2, dropout_U=0.2))
-model.add(Bidirectional(LSTM(256, dropout_W=0.2, dropout_U=0.2)))
+model.add(Embedding(config['vocabulary_size'], args.embedding_output, dropout=args.dropout))
+model.add(Bidirectional(LSTM(args.lstm_output, dropout_W=args.dropout, dropout_U=args.dropout)))
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
@@ -43,8 +46,19 @@ model.compile(loss='binary_crossentropy',
               metrics=['accuracy', 'fmeasure'])
 
 print('Train...')
-model.fit(x_train, y_train, batch_size=batch_size, nb_epoch=30,
-          validation_data=(x_val, y_val))
-score, acc = model.evaluate(x_val, y_val, batch_size=batch_size)
+csv_logger = CSVLogger('traininglog_%s.csv' % args.prefix)
+early_stopping = EarlyStopping(monitor='val_loss', patience=5)
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, min_lr=0.001)
+
+callbacks = [csv_logger, early_stopping, reduce_lr]
+
+if args.checkpoint:
+    checkpoint = ModelCheckpoint(checkpoint_file % args.prefix, monitor='val_loss')
+    callbacks.insert(checkpoint)
+
+model.fit(x_train, y_train, batch_size=args.batch_size, nb_epoch=args.epochs,
+          validation_data=(x_val, y_val), callbacks=callbacks)
+
+score, acc = model.evaluate(x_val, y_val, batch_size=args.batch_size)
 print('Test score:', score)
 print('Test accuracy:', acc)

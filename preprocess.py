@@ -12,6 +12,7 @@ from config import *
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 
+
 @timeit
 def load_pr_csv():
     """
@@ -26,6 +27,7 @@ def load_pr_csv():
     pullreqs = pd.read_csv(ORIG_DATA_FILE)
     pullreqs.set_index(['project_name', 'github_id'])
     return pullreqs
+
 
 def ensure_diffs():
     """
@@ -163,26 +165,25 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     y_val = labels[-nb_validation_samples:]
 
     # Save dataset
-    if not os.path.exists(DATASETS_DIR):
-        os.makedirs(DATASETS_DIR)
-
-    with open(os.path.join(DATASETS_DIR, 'x_train_%s.pcl' % prefix), 'w') as f:
+    with open(x_train_file % prefix, 'w') as f:
         pickle.dump(x_train, f)
 
-    with open(os.path.join(DATASETS_DIR, 'y_train_%s.pcl' % prefix), 'w') as f:
+    with open(y_train_file % prefix, 'w') as f:
         pickle.dump(y_train, f)
 
-    with open(os.path.join(DATASETS_DIR, 'x_val_%s.pcl' % prefix), 'w') as f:
+    with open(x_val_file % prefix, 'w') as f:
         pickle.dump(x_val, f)
 
-    with open(os.path.join(DATASETS_DIR, 'y_val_%s.pcl' % prefix), 'w') as f:
+    with open(y_val_file % prefix, 'w') as f:
         pickle.dump(y_val, f)
 
-    with open(os.path.join(DATASETS_DIR, 'config_%s.pcl' % prefix), 'w') as f:
+    with open(config_file % prefix, 'w') as f:
         pickle.dump(config, f)
 
     return x_train, y_train, x_val, y_val, config
 
+
+np.random.seed(1337)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--prefix', default='default')
