@@ -70,7 +70,12 @@ max_sequence_length 200
 ```
 
 #### Training
-After preprocessing the data, you'll need to train the model. The
+After preprocessing the data, you'll need to train the model. You can configure
+the training method by specifying the number of outputs from the LSTM layer,
+the number of outputs from the embeddings layer, the number of epochs to
+run and the batch size (number of samples per iteration).
+
+The training is configured to stop if no improvement is seen in validation loss after 5 epochs.
 
 ```bash
 usage: train.py [-h] [--prefix PREFIX] [--batch_size BATCH_SIZE]
