@@ -9,7 +9,7 @@ import os
 ## Files
 ORIG_DATA_URL = "https://dl.dropboxusercontent.com/u/57978013/data.csv"
 ORIG_DATA_FILE = "pr-data.csv"
-DIFFS_DATA_URL = "https://dl.dropboxusercontent.com/u/57978013/pullreq-patches.tar.gz"
+DIFFS_DATA_URL = "http://dutihr.st.ewi.tudelft.nl/downloads/pullreq-diffs.tar.gz"
 DIFFS_DIR = "pullreq-patches"
 DIFFS_FILE = "pullreq-patches.tar.gz"
 DATASETS_DIR = "datasets"
