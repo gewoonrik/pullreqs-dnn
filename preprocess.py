@@ -110,7 +110,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
 
     for name in os.listdir(DIFFS_DIR):
         files_examined += 1
-        if num_diffs > 0 and file_read >= num_diffs:
+        if num_diffs > 0 and files_read >= num_diffs:
             break
 
         try:
@@ -124,7 +124,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
 
             statinfo = os.stat(os.path.join(DIFFS_DIR, name))
             if statinfo.st_size == 0:
-                # Patch is zero size
+                # Diff is zero size
                 continue
 
             label_map = pd.concat([label_map, pd.DataFrame([[project_name, int(github_id)]],
@@ -134,7 +134,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
         except:
             pass
 
-        print("%s diffs examined, %s diffs read" % (files_examined, files_read) , end='\r')
+        print("%s diffs examined, %s diffs matching" % (files_examined, files_read) , end='\r')
 
     print("\nLoaded %s diffs" % len(text_map))
 
@@ -145,18 +145,22 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
 
     # Balancing the dataset
     label_map = balance(label_map, balance_ratio)
-    print("After balancing: %s patches" % len(label_map))
+    print("After balancing: %s diffs" % len(label_map))
 
     texts = []
     labels = []
+    successful = failed = 0
     for i, row in label_map.iterrows():
         try:
             texts.append(open(text_map[row['name']]).read())
             labels.append(int(row['merged'] * 1))
+            successful += 1
         except:
-            print("Failed %s" % row['name'])
+            failed += 1
             pass
+        print("%s diffs loaded, %s diffs failed" % (successful, failed), end='\r')
 
+    print("")
     tokens = tokenize(texts, vocabulary_size, maxlen)
     labels = np.asarray(labels)
     print('Shape of data tensor:', tokens.shape)
