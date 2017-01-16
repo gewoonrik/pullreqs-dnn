@@ -46,13 +46,13 @@ print json.dumps(config, indent=1)
 
 
 diff_input = Input(shape=(args.max_diff_sequence_length,), dtype='int32', name='diff_input')
-diff_embedding = Embedding(config['diff_vocabulary_size'], args.embedding_output, dropout=args.dropout)(diff_input)
+diff_embedding = Embedding(config['diff_vocabulary_size'], args.diff_embedding_output, dropout=args.dropout)(diff_input)
 diff_lstm = LSTM(args.lstm_diff_output, dropout_W=args.dropout, dropout_U=args.dropout)(diff_embedding)
 diff_auxiliary_output = Dense(1, activation='sigmoid', name='diff_aux_output')(diff_lstm)
 
 
 comment_input = Input(shape=(args.max_comment_sequence_length,), dtype='int32', name='comment_input')
-comment_embedding = Embedding(config['comment_vocabulary_size'], args.embedding_output, dropout=args.dropout)(comment_input)
+comment_embedding = Embedding(config['comment_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout)(comment_input)
 comment_lstm = LSTM(args.lstm_comment_output, dropout_W=args.dropout, dropout_U=args.dropout)(comment_embedding)
 comment_auxiliary_output = Dense(1, activation='sigmoid', name='comment_aux_output')(comment_lstm)
 
