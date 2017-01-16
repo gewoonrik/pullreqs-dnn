@@ -23,9 +23,14 @@ if not os.path.exists(DATASETS_DIR):
 if not os.path.exists(CHECKPOINT_DIR):
     os.makedirs(CHECKPOINT_DIR)
 
-x_train_file = os.path.join(DATASETS_DIR, 'x_train_%s.pcl')
+# todo: fix those paths
+diff_train_file = os.path.join(DATASETS_DIR, 'x_train_%s.pcl')
+comment_train_file = os.path.join(DATASETS_DIR, 'x_train_%s.pcl')
 y_train_file = os.path.join(DATASETS_DIR, 'y_train_%s.pcl')
-x_val_file = os.path.join(DATASETS_DIR, 'x_val_%s.pcl')
+
+# todo: idem
+diff_val_file = os.path.join(DATASETS_DIR, 'x_val_%s.pcl')
+comment_val_file = os.path.join(DATASETS_DIR, 'x_val_%s.pcl')
 y_val_file = os.path.join(DATASETS_DIR, 'y_val_%s.pcl')
 config_file = os.path.join(DATASETS_DIR, 'config_%s.pcl')
 checkpoint_file = os.path.join(CHECKPOINT_DIR, 'checkpoint_%s.{epoch:02d}-{val_loss:.2f}.hdf5')

@@ -8,8 +8,8 @@ import argparse
 import pickle
 import json
 
-from keras.models import Sequential
-from keras.layers import LSTM, Dense, Activation, Embedding, Bidirectional
+from keras.models import Model
+from keras.layers import Input, Dense, merge, LSTM, Embedding
 from keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 from config import *
@@ -19,16 +19,22 @@ parser.add_argument('--prefix', default='default')
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--dropout', type=float, default=0.2)
-parser.add_argument('--lstm_output', type=float, default=256)
-parser.add_argument('--embedding_output', type=float, default=512)
+parser.add_argument('--lstm_diff_output', type=float, default=256)
+parser.add_argument('--lstm_comment_output', type=float, default=256)
+parser.add_argument('--diff_embedding_output', type=float, default=512)
+parser.add_argument('--comment_embedding_output', type=float, default=512)
 parser.add_argument('--checkpoint', type=bool, default=False)
+parser.add_argument('--max_diff_sequence_length', type=int, default=100)
+parser.add_argument('--max_comment_sequence_length', type=int, default=100)
 
 args = parser.parse_args()
 
 print("Loading data set for prefix %s" % args.prefix)
-x_train = pickle.load(open(x_train_file % args.prefix))
+diff_train = pickle.load(open(diff_train_file % args.prefix))
+comment_train = pickle.load(open(comment_train_file % args.prefix))
 y_train = pickle.load(open(y_train_file % args.prefix))
-x_val = pickle.load(open(x_val_file % args.prefix))
+diff_val = pickle.load(open(diff_val_file % args.prefix))
+comment_val = pickle.load(open(comment_val_file % args.prefix))
 y_val = pickle.load(open(y_val_file % args.prefix))
 config = pickle.load(open(config_file % args.prefix))
 
@@ -38,15 +44,33 @@ config.update(vars(args))
 print("Training configuration:")
 print json.dumps(config, indent=1)
 
-model = Sequential()
-model.add(Embedding(config['vocabulary_size'], args.embedding_output, dropout=args.dropout))
-model.add(Bidirectional(LSTM(args.lstm_output, dropout_W=args.dropout, dropout_U=args.dropout)))
-model.add(Dense(1))
-model.add(Activation('sigmoid'))
+
+diff_input = Input(shape=(args.max_diff_sequence_length,), dtype='int32', name='diff_input')
+diff_embedding = Embedding(config['diff_vocabulary_size'], args.embedding_output, dropout=args.dropout)(diff_input)
+diff_lstm = LSTM(args.lstm_diff_output, dropout_W=args.dropout, dropout_U=args.dropout)(diff_embedding)
+diff_auxiliary_output = Dense(1, activation='sigmoid', name='diff_aux_output')(diff_lstm)
+
+
+comment_input = Input(shape=(args.max_comment_sequence_length,), dtype='int32', name='comment_input')
+comment_embedding = Embedding(config['comment_vocabulary_size'], args.embedding_output, dropout=args.dropout)(comment_input)
+comment_lstm = LSTM(args.lstm_comment_output, dropout_W=args.dropout, dropout_U=args.dropout)(comment_embedding)
+comment_auxiliary_output = Dense(1, activation='sigmoid', name='comment_aux_output')(comment_lstm)
+
+merged = merge([diff_lstm, comment_lstm], mode='concat')
+
+dense = Dense(64, activation='relu')(merged)
+dense = Dense(64, activation='relu')(dense)
+dense = Dense(64, activation='relu')(dense)
+
+main_output = Dense(1, activation='sigmoid', name='main_output')(dense)
+
+model = Model(input=[diff_input, comment_input], output=[main_output, diff_auxiliary_output, comment_auxiliary_output])
+
 
 model.compile(loss='binary_crossentropy',
-              optimizer='adam',
-              metrics=['accuracy', 'fmeasure'])
+              optimizer='adam', # todo: experiment with rmsprop
+              metrics=['accuracy', 'fmeasure'],
+              loss_weights=[1., 0.2, 0.2])
 
 print('Train...')
 csv_logger = CSVLogger('traininglog_%s.csv' % args.prefix)
@@ -59,9 +83,9 @@ if args.checkpoint:
     checkpoint = ModelCheckpoint(checkpoint_file % args.prefix, monitor='val_loss')
     callbacks.insert(checkpoint)
 
-model.fit(x_train, y_train, batch_size=args.batch_size, nb_epoch=args.epochs,
-          validation_data=(x_val, y_val), callbacks=callbacks)
+model.fit([diff_train, comment_train], y_train, batch_size=args.batch_size, nb_epoch=args.epochs,
+          validation_data=([diff_val, comment_val], y_val), callbacks=callbacks)
 
-score, acc = model.evaluate(x_val, y_val, batch_size=args.batch_size)
+score, acc = model.evaluate([diff_val, comment_val], y_val, batch_size=args.batch_size)
 print('Test score:', score)
 print('Test accuracy:', acc)
