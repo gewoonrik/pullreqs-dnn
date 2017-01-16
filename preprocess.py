@@ -74,6 +74,7 @@ def balance(pullreqs, balance_ratio):
 @timeit
 def tokenize(texts, vocabulary_size, maxlen):
     print("Tokenizing")
+    #todo: code tokenizer
     tokenizer = Tokenizer(nb_words=vocabulary_size)
     tokenizer.fit_on_texts(texts)
     sequences = tokenizer.texts_to_sequences(texts)
@@ -86,16 +87,19 @@ def tokenize(texts, vocabulary_size, maxlen):
 
 @timeit
 def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
-                   langs=[], validation_split=0.2, vocabulary_size=20000,
-                   maxlen=100):
+                   langs=[], validation_split=0.2, diff_vocabulary_size=20000,
+                   comment_vocabulary_size=20000,
+                   max_diff_length=100, max_comment_length=100):
     """
     Create a dataset for further processing
     :param prefix: Name for the dataset
     :param balance_ratio: The ratio between merged and unmerged PRs to include
     :param num_diffs: Total number of diffs to load. Any value below 1 means load all diffs.
     :param langs: Only include PRs for repos whose primary language is within this array
-    :param vocabulary_size: (Max) size of the vocabulary to use for tokenizing
-    :param maxlen: Maximum length of the input sequences
+    :param diff_vocabulary_size: (Max) size of the diff vocabulary to use for tokenizing
+    :param comment_vocabulary_size: (Max) size of the comment vocabulary to use for tokenizing
+    :param max_diff_length: Maximum length of the input diff sequences
+    :param max_comment_length: Maximum length of the input comment sequences
     :return: A training and testing dataset, along with the config used to produce it
     """
     config = locals()
@@ -147,6 +151,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     label_map = balance(label_map, balance_ratio)
     print("After balancing: %s diffs" % len(label_map))
 
+    #todo: also do this whole thing for PR comments
     texts = []
     labels = []
     successful = failed = 0
@@ -161,7 +166,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
         print("%s diffs loaded, %s diffs failed" % (successful, failed), end='\r')
 
     print("")
-    tokens = tokenize(texts, vocabulary_size, maxlen)
+    tokens = tokenize(texts, diff_vocabulary_size, max_diff_length)
     labels = np.asarray(labels)
     print('Shape of data tensor:', tokens.shape)
     print('Shape of label tensor:', labels.shape)
@@ -173,20 +178,22 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     labels = labels[indices]
     nb_validation_samples = int(validation_split * data.shape[0])
 
-    x_train = data[:-nb_validation_samples]
+    diff_train = data[:-nb_validation_samples]
+    #todo add comment_train
     y_train = labels[:-nb_validation_samples]
-    x_val = data[-nb_validation_samples:]
+    diff_val = data[-nb_validation_samples:]
+    #todo add comment_val
     y_val = labels[-nb_validation_samples:]
 
     # Save dataset
-    with open(x_train_file % prefix, 'w') as f:
-        pickle.dump(x_train, f)
+    with open(diff_train_file % prefix, 'w') as f:
+        pickle.dump(diff_train, f)
 
     with open(y_train_file % prefix, 'w') as f:
         pickle.dump(y_train, f)
 
-    with open(x_val_file % prefix, 'w') as f:
-        pickle.dump(x_val, f)
+    with open(diff_val_file % prefix, 'w') as f:
+        pickle.dump(diff_val, f)
 
     with open(y_val_file % prefix, 'w') as f:
         pickle.dump(y_val, f)
@@ -194,7 +201,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     with open(config_file % prefix, 'w') as f:
         pickle.dump(config, f)
 
-    return x_train, y_train, x_val, y_val, config
+    return diff_train, y_train, diff_val, y_val, config
 
 
 np.random.seed(1337)
@@ -205,11 +212,12 @@ parser.add_argument('--balance_ratio', type=float, default=1)
 parser.add_argument('--num_diffs', type=int, default=-1)
 parser.add_argument('--langs', nargs="*", default='')
 parser.add_argument('--validation_split', type=float, default=0.2)
-parser.add_argument('--vocabulary_size', type=int, default=20000)
+parser.add_argument('--diff_vocabulary_size', type=int, default=20000)
+parser.add_argument('--comment_vocabulary_size', type=int, default=20000)
 parser.add_argument('--max_sequence_length', type=int, default=100)
 
 args = parser.parse_args()
 
 if __name__ == '__main__':
     create_dataset(args.prefix, args.balance_ratio, args.num_diffs, args.langs,
-                   args.validation_split, args.vocabulary_size, args.max_sequence_length)
+                   args.validation_split, args.diff_vocabulary_size, args.comment_vocabulary_size, args.max_sequence_length)
