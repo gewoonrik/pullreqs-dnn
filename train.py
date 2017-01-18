@@ -40,7 +40,7 @@ print json.dumps(config, indent=1)
 
 model = Sequential()
 model.add(Embedding(config['vocabulary_size'], args.embedding_output, dropout=args.dropout))
-model.add(Bidirectional(LSTM(args.lstm_output, dropout_W=args.dropout, dropout_U=args.dropout)))
+model.add(LSTM(args.lstm_output, dropout_W=args.dropout, dropout_U=args.dropout))
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
