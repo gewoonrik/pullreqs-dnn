@@ -74,7 +74,7 @@ def balance(pullreqs, balance_ratio):
 @timeit
 def tokenize(texts, vocabulary_size, maxlen):
     print("Tokenizing")
-    tokenizer = Tokenizer(nb_words=vocabulary_size)
+    tokenizer = Tokenizer(nb_words=vocabulary_size, char_level=True, filters="")
     tokenizer.fit_on_texts(texts)
     sequences = tokenizer.texts_to_sequences(texts)
 
