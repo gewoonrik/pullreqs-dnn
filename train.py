@@ -10,6 +10,7 @@ import json
 
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Activation, Embedding, Bidirectional
+from keras.optimizers import RMSprop
 from keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 from config import *
@@ -44,8 +45,10 @@ model.add(LSTM(args.lstm_output, dropout_W=args.dropout, dropout_U=args.dropout)
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
+optimizer = RMSprop(lr = 0.005)
+
 model.compile(loss='binary_crossentropy',
-              optimizer='adam',
+              optimizer=optimizer,
               metrics=['accuracy', 'fmeasure'])
 
 print('Train...')
