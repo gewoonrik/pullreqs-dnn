@@ -10,6 +10,8 @@ import json
 
 from keras.models import Model
 from keras.layers import Input, Dense, merge, LSTM, Embedding
+from keras.layers import LSTM, Dense, Activation, Embedding, Bidirectional
+from keras.optimizers import RMSprop
 from keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 from config import *
@@ -19,10 +21,10 @@ parser.add_argument('--prefix', default='default')
 parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--dropout', type=float, default=0.2)
-parser.add_argument('--lstm_diff_output', type=float, default=256)
-parser.add_argument('--lstm_comment_output', type=float, default=256)
-parser.add_argument('--diff_embedding_output', type=float, default=512)
-parser.add_argument('--comment_embedding_output', type=float, default=512)
+parser.add_argument('--lstm_diff_output', type=int, default=256)
+parser.add_argument('--lstm_comment_output', type=int, default=256)
+parser.add_argument('--diff_embedding_output', type=int, default=512)
+parser.add_argument('--comment_embedding_output', type=int, default=512)
 parser.add_argument('--checkpoint', type=bool, default=False)
 parser.add_argument('--max_diff_sequence_length', type=int, default=100)
 parser.add_argument('--max_comment_sequence_length', type=int, default=100)
@@ -47,13 +49,13 @@ print json.dumps(config, indent=1)
 
 diff_input = Input(shape=(args.max_diff_sequence_length,), dtype='int32', name='diff_input')
 diff_embedding = Embedding(config['diff_vocabulary_size'], args.diff_embedding_output, dropout=args.dropout)(diff_input)
-diff_lstm = LSTM(args.lstm_diff_output, dropout_W=args.dropout, dropout_U=args.dropout)(diff_embedding)
+diff_lstm = LSTM(args.lstm_diff_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(diff_embedding)
 diff_auxiliary_output = Dense(1, activation='sigmoid', name='diff_aux_output')(diff_lstm)
 
 
 comment_input = Input(shape=(args.max_comment_sequence_length,), dtype='int32', name='comment_input')
 comment_embedding = Embedding(config['comment_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout)(comment_input)
-comment_lstm = LSTM(args.lstm_comment_output, dropout_W=args.dropout, dropout_U=args.dropout)(comment_embedding)
+comment_lstm = LSTM(args.lstm_comment_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(comment_embedding)
 comment_auxiliary_output = Dense(1, activation='sigmoid', name='comment_aux_output')(comment_lstm)
 
 merged = merge([diff_lstm, comment_lstm], mode='concat')
@@ -67,10 +69,12 @@ main_output = Dense(1, activation='sigmoid', name='main_output')(dense)
 model = Model(input=[diff_input, comment_input], output=[main_output, diff_auxiliary_output, comment_auxiliary_output])
 
 
+optimizer = RMSprop(lr = 0.005)
+
 model.compile(loss='binary_crossentropy',
-              optimizer='adam', # todo: experiment with rmsprop
-              metrics=['accuracy', 'fmeasure'],
-              loss_weights=[1., 0.2, 0.2])
+            optimizer=optimizer,
+            metrics=['accuracy', 'fmeasure'],
+            loss_weights=[1., 0.2, 0.2])
 
 print('Train...')
 csv_logger = CSVLogger('traininglog_%s.csv' % args.prefix)
