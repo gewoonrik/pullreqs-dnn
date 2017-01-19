@@ -8,11 +8,19 @@ def text_to_word_sequence(text, filters=base_code_filter(), lower=True, split=" 
     '''prune: sequence of characters to filter out
     '''
     if lower:
-        text = text.lower()
-    text = text.translate(maketrans(filters, split*len(filters)))
-    seq = text.split(split)
+        text = text.lower() #type: str
+    seq = []
+    curr = ""
+    for c in text:
+        if c.isalnum():
+            curr += c
+        else:
+            if curr != "":
+                seq.append(curr)
+                curr = ""
+            if not c.isspace() or c == '\n':
+                seq.append(c)
     return [_f for _f in seq if _f]
-
 
 # this class overrides methods to use the text_to_word_sequence function above.
 class CodeTokenizer(Tokenizer):
