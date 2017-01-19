@@ -22,20 +22,25 @@ parser.add_argument('--batch_size', type=int, default=64)
 parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--dropout', type=float, default=0.2)
 parser.add_argument('--lstm_diff_output', type=int, default=256)
+parser.add_argument('--lstm_title_output', type=int, default=256)
 parser.add_argument('--lstm_comment_output', type=int, default=256)
 parser.add_argument('--diff_embedding_output', type=int, default=512)
+parser.add_argument('--title_embedding_output', type=int, default=512)
 parser.add_argument('--comment_embedding_output', type=int, default=512)
 parser.add_argument('--checkpoint', type=bool, default=False)
 parser.add_argument('--max_diff_sequence_length', type=int, default=100)
+parser.add_argument('--max_title_sequence_length', type=int, default=100)
 parser.add_argument('--max_comment_sequence_length', type=int, default=100)
 
 args = parser.parse_args()
 
 print("Loading data set for prefix %s" % args.prefix)
 diff_train = pickle.load(open(diff_train_file % args.prefix))
+title_train = pickle.load(open(title_train_file % args.prefix))
 comment_train = pickle.load(open(comment_train_file % args.prefix))
 y_train = pickle.load(open(y_train_file % args.prefix))
 diff_val = pickle.load(open(diff_val_file % args.prefix))
+title_val = pickle.load(open(title_val_file % args.prefix))
 comment_val = pickle.load(open(comment_val_file % args.prefix))
 y_val = pickle.load(open(y_val_file % args.prefix))
 config = pickle.load(open(config_file % args.prefix))
@@ -58,15 +63,21 @@ comment_embedding = Embedding(config['comment_vocabulary_size'], args.comment_em
 comment_lstm = LSTM(args.lstm_comment_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(comment_embedding)
 comment_auxiliary_output = Dense(1, activation='sigmoid', name='comment_aux_output')(comment_lstm)
 
-merged = merge([diff_lstm, comment_lstm], mode='concat')
+title_input = Input(shape=(args.max_title_sequence_length,), dtype='int32', name='title_input')
+title_embedding = Embedding(config['title_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout)(title_input)
+title_lstm = LSTM(args.lstm_title_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(title_embedding)
+title_auxiliary_output = Dense(1, activation='sigmoid', name='title_aux_output')(title_lstm)
 
-dense = Dense(64, activation='relu')(merged)
-dense = Dense(64, activation='relu')(dense)
-dense = Dense(64, activation='relu')(dense)
+
+merged = merge([diff_lstm, comment_lstm, title_auxiliary_output], mode='concat')
+
+dense = Dense(128, activation='relu')(merged)
+dense = Dense(128, activation='relu')(dense)
+dense = Dense(128, activation='relu')(dense)
 
 main_output = Dense(1, activation='sigmoid', name='main_output')(dense)
 
-model = Model(input=[diff_input, comment_input], output=[main_output, diff_auxiliary_output, comment_auxiliary_output])
+model = Model(input=[diff_input, comment_input, title_input], output=[main_output, diff_auxiliary_output, comment_auxiliary_output, title_auxiliary_output])
 
 
 optimizer = RMSprop(lr = 0.005)
@@ -74,7 +85,7 @@ optimizer = RMSprop(lr = 0.005)
 model.compile(loss='binary_crossentropy',
             optimizer=optimizer,
             metrics=['accuracy', 'fmeasure'],
-            loss_weights=[1., 0.2, 0.2])
+            loss_weights=[1., 0.2, 0.2, 0.2])
 
 print('Train...')
 csv_logger = CSVLogger('traininglog_%s.csv' % args.prefix)
@@ -87,9 +98,9 @@ if args.checkpoint:
     checkpoint = ModelCheckpoint(checkpoint_file % args.prefix, monitor='val_loss')
     callbacks.insert(checkpoint)
 
-model.fit([diff_train, comment_train], y_train, batch_size=args.batch_size, nb_epoch=args.epochs,
-          validation_data=([diff_val, comment_val], y_val), callbacks=callbacks)
+model.fit([diff_train, comment_train, title_train], y_train, batch_size=args.batch_size, nb_epoch=args.epochs,
+          validation_data=([diff_val, comment_val, title_val], y_val), callbacks=callbacks)
 
-score, acc = model.evaluate([diff_val, comment_val], y_val, batch_size=args.batch_size)
+score, acc = model.evaluate([diff_val, comment_val, title_val], y_val, batch_size=args.batch_size)
 print('Test score:', score)
 print('Test accuracy:', acc)
