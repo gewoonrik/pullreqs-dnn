@@ -13,7 +13,7 @@ import numpy as np
 import argparse
 
 from config import *
-from keras.preprocessing.text import Tokenizer
+from tokenizer import CodeTokenizer
 from keras.preprocessing.sequence import pad_sequences
 
 
@@ -74,7 +74,7 @@ def balance(pullreqs, balance_ratio):
 @timeit
 def tokenize(texts, vocabulary_size, maxlen):
     print("Tokenizing")
-    tokenizer = Tokenizer(nb_words=vocabulary_size)
+    tokenizer = CodeTokenizer(nb_words=vocabulary_size)
     tokenizer.fit_on_texts(texts)
     sequences = tokenizer.texts_to_sequences(texts)
 
