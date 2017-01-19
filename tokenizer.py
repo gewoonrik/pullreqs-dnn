@@ -5,7 +5,10 @@ def base_code_filter():
     return ""
 
 def text_to_word_sequence(text, filters=base_code_filter(), lower=True, split=" "):
-    '''prune: sequence of characters to filter out
+    ''' Tokenizes code. All consecutive alphanumeric characters are grouped into one token.
+    Thereby trying to heuristically match identifiers.
+    All other symbols are seen as one token.
+    Whitespace is stripped, except the newline token.
     '''
     if lower:
         text = text.lower() #type: str
@@ -22,7 +25,7 @@ def text_to_word_sequence(text, filters=base_code_filter(), lower=True, split=" 
                 seq.append(c)
     return [_f for _f in seq if _f]
 
-# this class overrides methods to use the text_to_word_sequence function above.
+# this class overrides methods to be able to use the text_to_word_sequence function above.
 class CodeTokenizer(Tokenizer):
     def fit_on_texts(self, texts):
         '''Required before using texts_to_sequences or texts_to_matrix
