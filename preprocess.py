@@ -185,7 +185,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     for i, row in label_map.iterrows():
         try:
             diff_file = os.path.join(DIFFS_DIR, text_map[row['name']])
-            comment_file = os.path.join(TXTS_DIR, text_map[row['name']])
+            comment_file = os.path.join(TXTS_DIR, text_map[row['name']].replace(".patch",".txt"))
 
             diff = open(diff_file).read()
             title, comment = read_title_and_comments(comment_file)
