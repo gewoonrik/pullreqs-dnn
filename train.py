@@ -98,9 +98,9 @@ if args.checkpoint:
     checkpoint = ModelCheckpoint(checkpoint_file % args.prefix, monitor='val_loss')
     callbacks.insert(checkpoint)
 
-model.fit([diff_train, comment_train, title_train], y_train, batch_size=args.batch_size, nb_epoch=args.epochs,
-          validation_data=([diff_val, comment_val, title_val], y_val), callbacks=callbacks)
+model.fit([diff_train, comment_train, title_train], [y_train, y_train, y_train, y_train], batch_size=args.batch_size, nb_epoch=args.epochs,
+          validation_data=([diff_val, comment_val, title_val], [y_val, y_val, y_val, y_val]), callbacks=callbacks)
 
-score, acc = model.evaluate([diff_val, comment_val, title_val], y_val, batch_size=args.batch_size)
+score, acc = model.evaluate([diff_val, comment_val, title_val], [y_val,y_val,y_val, y_val], batch_size=args.batch_size)
 print('Test score:', score)
 print('Test accuracy:', acc)
