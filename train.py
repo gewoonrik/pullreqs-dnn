@@ -69,7 +69,7 @@ title_lstm = LSTM(args.lstm_title_output, consume_less='gpu', dropout_W=args.dro
 title_auxiliary_output = Dense(1, activation='sigmoid', name='title_aux_output')(title_lstm)
 
 
-merged = merge([diff_lstm, comment_lstm, title_auxiliary_output], mode='concat')
+merged = merge([diff_lstm, comment_lstm, title_lstm], mode='concat')
 
 dense = Dense(128, activation='relu')(merged)
 dense = Dense(128, activation='relu')(dense)
