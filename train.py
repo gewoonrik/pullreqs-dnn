@@ -9,10 +9,9 @@ import pickle
 import json
 
 from keras.models import Model
-from keras.layers import Input, Dense, merge, LSTM, Embedding, Dropout
+from keras.layers import Input, Dense, merge, LSTM, Embedding
 from keras.layers import LSTM, Dense, Activation, Embedding, Bidirectional
 from keras.optimizers import RMSprop
-from keras.regularizers import l1l2
 from keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
 from config import *
@@ -54,30 +53,27 @@ print json.dumps(config, indent=1)
 
 
 diff_input = Input(shape=(config['max_diff_length'],), dtype='int32', name='diff_input')
-diff_embedding = Embedding(config['diff_vocabulary_size'], args.diff_embedding_output, dropout=args.dropout, W_regularizer=l1l2(l1=0.01, l2=0.01))(diff_input)
-diff_lstm = LSTM(args.lstm_diff_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout, W_regularizer=l1l2(l1=0.01, l2=0.01), U_regularizer=l1l2(l1=0.01, l2=0.01))(diff_embedding)
+diff_embedding = Embedding(config['diff_vocabulary_size'], args.diff_embedding_output, dropout=args.dropout)(diff_input)
+diff_lstm = LSTM(args.lstm_diff_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(diff_embedding)
 diff_auxiliary_output = Dense(1, activation='sigmoid', name='diff_aux_output')(diff_lstm)
 
 
 comment_input = Input(shape=(config['max_comment_length'],), dtype='int32', name='comment_input')
-comment_embedding = Embedding(config['comment_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout, W_regularizer=l1l2(l1=0.01, l2=0.01))(comment_input)
-comment_lstm = LSTM(args.lstm_comment_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout, W_regularizer=l1l2(l1=0.01, l2=0.01), U_regularizer=l1l2(l1=0.01, l2=0.01))(comment_embedding)
+comment_embedding = Embedding(config['comment_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout)(comment_input)
+comment_lstm = LSTM(args.lstm_comment_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(comment_embedding)
 comment_auxiliary_output = Dense(1, activation='sigmoid', name='comment_aux_output')(comment_lstm)
 
 title_input = Input(shape=(config['max_title_length'],), dtype='int32', name='title_input')
-title_embedding = Embedding(config['title_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout, W_regularizer=l1l2(l1=0.01, l2=0.01))(title_input)
-title_lstm = LSTM(args.lstm_title_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout, W_regularizer=l1l2(l1=0.01, l2=0.01), U_regularizer=l1l2(l1=0.01, l2=0.01))(title_embedding)
+title_embedding = Embedding(config['title_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout)(title_input)
+title_lstm = LSTM(args.lstm_title_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(title_embedding)
 title_auxiliary_output = Dense(1, activation='sigmoid', name='title_aux_output')(title_lstm)
 
 
 merged = merge([diff_lstm, comment_lstm, title_lstm], mode='concat')
 
-dense = Dense(100, activation='relu', W_regularizer=l1l2(l1=0.01, l2=0.01))(merged)
-dense = Dropout(args.dropout)(dense)
-dense = Dense(100, activation='relu', dropout=args.dropout, W_regularizer=l1l2(l1=0.01, l2=0.01))(dense)
-dense = Dropout(args.dropout)(dense)
-dense = Dense(100, activation='relu', dropout=args.dropout, W_regularizer=l1l2(l1=0.01, l2=0.01))(dense)
-dense = Dropout(args.dropout)(dense)
+dense = Dense(128, activation='relu')(merged)
+dense = Dense(128, activation='relu')(dense)
+dense = Dense(128, activation='relu')(dense)
 
 main_output = Dense(1, activation='sigmoid', name='main_output')(dense)
 
