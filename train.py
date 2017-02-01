@@ -74,9 +74,9 @@ merged = merge([diff_lstm, comment_lstm, title_lstm], mode='concat')
 
 dense = Dense(100, activation='relu', W_regularizer=l1l2(l1=0.01, l2=0.01))(merged)
 dense = Dropout(args.dropout)(dense)
-dense = Dense(100, activation='relu', W_regularizer=l1l2(l1=0.01, l2=0.01))(dense)
+dense = Dense(100, activation='relu', dropout=args.dropout, W_regularizer=l1l2(l1=0.01, l2=0.01))(dense)
 dense = Dropout(args.dropout)(dense)
-dense = Dense(100, activation='relu', W_regularizer=l1l2(l1=0.01, l2=0.01))(dense)
+dense = Dense(100, activation='relu', dropout=args.dropout, W_regularizer=l1l2(l1=0.01, l2=0.01))(dense)
 dense = Dropout(args.dropout)(dense)
 
 main_output = Dense(1, activation='sigmoid', name='main_output')(dense)
