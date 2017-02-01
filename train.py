@@ -60,7 +60,7 @@ callbacks = [csv_logger, early_stopping, reduce_lr]
 
 if args.checkpoint:
     checkpoint = ModelCheckpoint(checkpoint_file % args.prefix, monitor='val_loss')
-    callbacks.insert(checkpoint)
+    callbacks.append(checkpoint)
 
 model.fit(x_train, y_train, batch_size=args.batch_size, nb_epoch=args.epochs,
           validation_data=(x_val, y_val), callbacks=callbacks)
