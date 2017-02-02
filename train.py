@@ -60,18 +60,18 @@ print json.dumps(config, indent=1)
 
 
 diff_input = Input(shape=(config['max_diff_length'],), dtype='int32', name='diff_input')
-diff_embedding = Embedding(config['diff_vocabulary_size'], args.diff_embedding_output, dropout=args.dropout)(diff_input)
+diff_embedding = Embedding(config['diff_vocabulary_size']+1, args.diff_embedding_output, dropout=args.dropout)(diff_input)
 diff_lstm = LSTM(args.lstm_diff_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(diff_embedding)
 diff_auxiliary_output = Dense(1, activation='sigmoid', name='diff_aux_output')(diff_lstm)
 
 
 comment_input = Input(shape=(config['max_comment_length'],), dtype='int32', name='comment_input')
-comment_embedding = Embedding(config['comment_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout)(comment_input)
+comment_embedding = Embedding(config['comment_vocabulary_size']+1, args.comment_embedding_output, dropout=args.dropout)(comment_input)
 comment_lstm = LSTM(args.lstm_comment_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(comment_embedding)
 comment_auxiliary_output = Dense(1, activation='sigmoid', name='comment_aux_output')(comment_lstm)
 
 title_input = Input(shape=(config['max_title_length'],), dtype='int32', name='title_input')
-title_embedding = Embedding(config['title_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout)(title_input)
+title_embedding = Embedding(config['title_vocabulary_size']+1, args.comment_embedding_output, dropout=args.dropout)(title_input)
 title_lstm = LSTM(args.lstm_title_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(title_embedding)
 title_auxiliary_output = Dense(1, activation='sigmoid', name='title_aux_output')(title_lstm)
 
