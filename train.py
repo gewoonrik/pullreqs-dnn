@@ -85,7 +85,7 @@ optimizer = RMSprop(lr = 0.005)
 model.compile(loss='binary_crossentropy',
             optimizer=optimizer,
             metrics=['accuracy', 'fmeasure'],
-            loss_weights=[1., 0.2, 0.2, 0.2])
+            loss_weights=[1., 0.3, 0.1, 0.1])
 
 print('Train...')
 csv_logger = CSVLogger('traininglog_%s.csv' % args.prefix)
