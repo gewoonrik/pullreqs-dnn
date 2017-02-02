@@ -2,7 +2,7 @@ from __future__ import print_function
 from keras.preprocessing.text import Tokenizer, maketrans
 import string
 
-def base_filter(self):
+def base_filter():
     f = string.punctuation
     f = f.replace("'", '')
     f += '\t\n'
