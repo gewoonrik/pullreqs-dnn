@@ -169,7 +169,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
 
     nb_test_samples = int(test_split * len(texts_labels))
 
-    training_texts, training_labels = texts_labels[:-nb_test_samples]
+    training_texts, training_labels = zip(*texts_labels[:-nb_test_samples])
     test_texts, test_labels = zip(*texts_labels[-nb_test_samples:])
 
     print("")
