@@ -2,14 +2,15 @@ from __future__ import print_function
 from keras.preprocessing.text import Tokenizer, maketrans
 import string
 
+def base_filter(self):
+    f = string.punctuation
+    f = f.replace("'", '')
+    f += '\t\n'
+    return f
 
 # a tokenizer that supports out of vocabulary tokens
 class OOVTokenizer(Tokenizer):
-    def base_filter(self):
-        f = string.punctuation
-        f = f.replace("'", '')
-        f += '\t\n'
-        return f
+
 
     # this is added to the class to support overriding in subclasses, like the code tokenizer
     def text_to_word_sequence(self, text, filters=base_filter(), lower=True, split=" "):
