@@ -39,10 +39,17 @@ diff_train = pickle.load(open(diff_train_file % args.prefix))
 title_train = pickle.load(open(title_train_file % args.prefix))
 comment_train = pickle.load(open(comment_train_file % args.prefix))
 y_train = pickle.load(open(y_train_file % args.prefix))
+
 diff_val = pickle.load(open(diff_val_file % args.prefix))
 title_val = pickle.load(open(title_val_file % args.prefix))
 comment_val = pickle.load(open(comment_val_file % args.prefix))
 y_val = pickle.load(open(y_val_file % args.prefix))
+
+diff_test = pickle.load(open(diff_test_file % args.prefix))
+title_test = pickle.load(open(title_test_file % args.prefix))
+comment_test = pickle.load(open(comment_test_file % args.prefix))
+y_test = pickle.load(open(y_test_file % args.prefix))
+
 config = pickle.load(open(config_file % args.prefix))
 
 print("Training on %d merged, %d unmerged PRs" % (y_train[y_train == 1].size,
@@ -101,6 +108,12 @@ if args.checkpoint:
 model.fit([diff_train, comment_train, title_train], [y_train, y_train, y_train, y_train], batch_size=args.batch_size, nb_epoch=args.epochs,
           validation_data=([diff_val, comment_val, title_val], [y_val, y_val, y_val, y_val]), callbacks=callbacks)
 
-score, acc = model.evaluate([diff_val, comment_val, title_val], [y_val,y_val,y_val, y_val], batch_size=args.batch_size)
-print('Test score:', score)
-print('Test accuracy:', acc)
+[(main_score, main_acc), (diff_score, diff_acc), (comment_score, comment_acc), (title_score,title_acc)] = model.evaluate([diff_test, comment_test, title_test], [y_test,y_test,y_test, y_test], batch_size=args.batch_size)
+print('Test main score:', main_score)
+print('Test main accuracy:', main_acc)
+print('Test diff score:', diff_score)
+print('Test diff accuracy:', diff_acc)
+print('Test comment score:', comment_score)
+print('Test comment accuracy:', comment_acc)
+print('Test title score:', title_score)
+print('Test title accuracy:', title_acc)

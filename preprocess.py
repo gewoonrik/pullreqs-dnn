@@ -11,6 +11,7 @@ import pickle
 import urllib
 import numpy as np
 import argparse
+import random
 
 from config import *
 from code_tokenizer import CodeTokenizer
@@ -80,32 +81,31 @@ def read_title_and_comments(file):
     return title, comment
 
 @timeit
-def tokenize_code(texts, vocabulary_size, maxlen):
-    print("Tokenizing")
+def create_code_tokenizer(code, vocabulary_size):
     tokenizer = CodeTokenizer(nb_words=vocabulary_size)
-    tokenizer.fit_on_texts(texts)
-    sequences = tokenizer.texts_to_sequences(texts)
-
+    tokenizer.fit_on_texts(code)
     word_index = tokenizer.word_index
-    print('Found %s unique code tokens.' % len(word_index))
+    print('Found %s unique tokens.' % len(word_index))
+    return tokenizer
 
-    return pad_sequences(sequences, maxlen=maxlen)
-
-@timeit
-def tokenize_text(texts, vocabulary_size, maxlen):
-    print("Tokenizing")
+def create_text_tokenizer(texts, vocabulary_size):
     tokenizer = OOVTokenizer(nb_words=vocabulary_size)
     tokenizer.fit_on_texts(texts)
-    sequences = tokenizer.texts_to_sequences(texts)
-
     word_index = tokenizer.word_index
-    print('Found %s unique text tokens.' % len(word_index))
+    print('Found %s unique tokens.' % len(word_index))
+    return tokenizer
 
+
+@timeit
+def tokenize(tokenizer, texts, maxlen):
+    print("Tokenizing")
+    sequences = tokenizer.texts_to_sequences(texts)
     return pad_sequences(sequences, maxlen=maxlen)
 
 @timeit
 def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
-                   langs=[], validation_split=0.2,
+                   langs=[], validation_split=0.1,
+                   test_split=0.2,
                    diff_vocabulary_size=20000,
                    comment_vocabulary_size=20000,
                    title_vocabulary_size=20000,
@@ -201,39 +201,68 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
         print("%s diffs loaded, %s diffs failed" % (successful, failed), end='\r')
 
     print("")
-    diff_tokens = tokenize_code(diffs, diff_vocabulary_size, max_diff_length)
-    comment_tokens = tokenize_text(comments, comment_vocabulary_size, max_comment_length)
-    title_tokens = tokenize_text(titles, title_vocabulary_size, max_title_length)
 
-    labels = np.asarray(labels)
-    print('Shape of diff tensor:', diff_tokens.shape)
-    print('Shape of comment tensor:', comment_tokens.shape)
-    print('Shape of title tensor:', title_tokens.shape)
+    combined = list(zip(diffs, comments, titles, labels))
+    random.shuffle(combined)
 
-    print('Shape of label tensor:', labels.shape)
+    nb_test_samples = int(test_split * len(combined))
+
+    tr_diffs, tr_comments, tr_titles, tr_labels = zip(*combined[:-nb_test_samples])
+    te_diffs, te_comments, te_titles, te_labels = zip(*combined[-nb_test_samples:])
+
+
+    code_tokenizer = create_code_tokenizer(tr_diffs, diff_vocabulary_size)
+    tr_diff_tokens = tokenize(code_tokenizer, tr_diffs, max_diff_length)
+
+    comment_tokenizer = create_text_tokenizer(tr_comments, comment_vocabulary_size)
+    tr_comment_tokens = tokenize(comment_tokenizer, tr_comments, max_comment_length)
+
+    title_tokenizer = create_text_tokenizer(tr_titles, title_vocabulary_size)
+    tr_title_tokens = tokenize(title_tokenizer, tr_titles, max_title_length)
+
+    tr_labels = np.asarray(tr_labels)
+    print('Shape of diff tensor:', tr_diff_tokens.shape)
+    print('Shape of comment tensor:', tr_comment_tokens.shape)
+    print('Shape of title tensor:', tr_title_tokens.shape)
+
+    print('Shape of label tensor:', tr_labels.shape)
 
     # Random selection split between training and testing
-    indices = np.arange(diff_tokens.shape[0])
+    indices = np.arange(tr_diff_tokens.shape[0])
     np.random.shuffle(indices)
-    data_diff = diff_tokens[indices]
-    data_comment = comment_tokens[indices]
-    data_title = title_tokens[indices]
+    data_diff = tr_diff_tokens[indices]
+    data_comment = tr_comment_tokens[indices]
+    data_title = tr_title_tokens[indices]
 
-    labels = labels[indices]
+    tr_labels = tr_labels[indices]
     nb_validation_samples = int(validation_split * data_diff.shape[0])
 
     diff_train = data_diff[:-nb_validation_samples]
     comment_train = data_comment[:-nb_validation_samples]
     title_train = data_title[:-nb_validation_samples]
-
     y_train = labels[:-nb_validation_samples]
+
     diff_val = data_diff[-nb_validation_samples:]
     comment_val = data_comment[-nb_validation_samples:]
     title_val = data_title[-nb_validation_samples:]
-
     y_val = labels[-nb_validation_samples:]
 
+
+    diff_test = tokenize(code_tokenizer, te_diffs, max_diff_length)
+    comment_test = tokenize(comment_tokenizer, te_comments, max_comment_length)
+    title_test = tokenize(title_tokenizer, te_titles, max_title_length)
+    y_test = te_labels
+
     # Save dataset
+    with open(diff_vocab_file % prefix, 'w') as f:
+        pickle.dump(code_tokenizer, f)
+
+    with open(comment_vocab_file % prefix, 'w') as f:
+        pickle.dump(comment_tokenizer, f)
+
+    with open(title_vocab_file % prefix, 'w') as f:
+        pickle.dump(title_tokenizer, f)
+
     with open(diff_train_file % prefix, 'w') as f:
         pickle.dump(diff_train, f)
 
@@ -255,9 +284,22 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     with open(title_val_file % prefix, 'w') as f:
         pickle.dump(title_val, f)
 
-
     with open(y_val_file % prefix, 'w') as f:
         pickle.dump(y_val, f)
+
+    # save testdata
+    with open(diff_test_file % prefix, 'w') as f:
+        pickle.dump(diff_test, f)
+
+    with open(comment_test_file % prefix, 'w') as f:
+        pickle.dump(comment_test, f)
+
+    with open(title_test_file % prefix, 'w') as f:
+        pickle.dump(title_test, f)
+
+    with open(y_test_file % prefix, 'w') as f:
+        pickle.dump(y_test, f)
+
 
     with open(config_file % prefix, 'w') as f:
         pickle.dump(config, f)
@@ -272,7 +314,8 @@ parser.add_argument('--prefix', default='default')
 parser.add_argument('--balance_ratio', type=float, default=1)
 parser.add_argument('--num_diffs', type=int, default=-1)
 parser.add_argument('--langs', nargs="*", default='')
-parser.add_argument('--validation_split', type=float, default=0.2)
+parser.add_argument('--validation_split', type=float, default=0.1)
+parser.add_argument('--test_split', type=float, default=0.2)
 parser.add_argument('--diff_vocabulary_size', type=int, default=20000)
 parser.add_argument('--comment_vocabulary_size', type=int, default=20000)
 parser.add_argument('--title_vocabulary_size', type=int, default=20000)
@@ -284,4 +327,4 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     create_dataset(args.prefix, args.balance_ratio, args.num_diffs, args.langs,
-                   args.validation_split, args.diff_vocabulary_size, args.comment_vocabulary_size, args.title_vocabulary_size, args.max_diff_sequence_length, args.max_comment_sequence_length, args.max_title_sequence_length)
+                   args.validation_split, args.test_split, args.diff_vocabulary_size, args.comment_vocabulary_size, args.title_vocabulary_size, args.max_diff_sequence_length, args.max_comment_sequence_length, args.max_title_sequence_length)

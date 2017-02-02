@@ -1,3 +1,4 @@
+from __future__ import print_function
 from keras.preprocessing.text import Tokenizer, maketrans
 import string
 
@@ -65,6 +66,8 @@ class OOVTokenizer(Tokenizer):
             texts: list of strings.
         '''
         nb_words = self.nb_words
+        length = len(texts)
+        count = 0
         for text in texts:
             seq = text if self.char_level else self.text_to_word_sequence(text, self.filters, self.lower, self.split)
             vect = []
@@ -77,4 +80,6 @@ class OOVTokenizer(Tokenizer):
                         vect.append(i)
                 else:
                     vect.append(self.oov_token)
+            count+=1
+            print("tokenizing %s / %s" % (count, length), end='\r')
             yield vect

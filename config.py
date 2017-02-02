@@ -34,8 +34,18 @@ comment_val_file = os.path.join(DATASETS_DIR, 'comment_val_%s.pcl')
 title_val_file = os.path.join(DATASETS_DIR, 'title_val_%s.pcl')
 y_val_file = os.path.join(DATASETS_DIR, 'y_val_%s.pcl')
 
+diff_test_file = os.path.join(DATASETS_DIR, 'diff_test_%s.pcl')
+comment_test_file = os.path.join(DATASETS_DIR, 'comment_test_%s.pcl')
+title_test_file = os.path.join(DATASETS_DIR, 'title_test_%s.pcl')
+y_test_file = os.path.join(DATASETS_DIR, 'y_test_%s.pcl')
+
 config_file = os.path.join(DATASETS_DIR, 'config_%s.pcl')
 checkpoint_file = os.path.join(CHECKPOINT_DIR, 'checkpoint_%s.{epoch:02d}-{val_loss:.2f}.hdf5')
+
+diff_vocab_file = os.path.join(DATASETS_DIR, 'diff_vocab_%s.pcl')
+comment_vocab_file = os.path.join(DATASETS_DIR, 'comment_vocab_%s.pcl')
+title_vocab_file = os.path.join(DATASETS_DIR, 'title_vocab_%s.pcl')
+
 
 def timeit(f):
     def timed(*args, **kw):
