@@ -42,7 +42,7 @@ print("Training configuration:")
 print json.dumps(config, indent=1)
 
 model = Sequential()
-model.add(Embedding(config['vocabulary_size'], args.embedding_output, dropout=args.dropout))
+model.add(Embedding(config['vocabulary_size']+1, args.embedding_output, dropout=args.dropout))
 model.add(LSTM(args.lstm_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout))
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
