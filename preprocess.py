@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# (c) 2016 -- onwards Georgios Gousios <gousiosg@gmail.com>
+# (c) 2016 -- onwards Georgios Gousios <gousiosg@gmail.com>, Rik Nijessen <riknijessen@gmail.com>
 #
 
 
@@ -13,7 +13,7 @@ import numpy as np
 import argparse
 
 from config import *
-from tokenizer import CodeTokenizer
+from code_tokenizer import CodeTokenizer
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
 
