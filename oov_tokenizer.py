@@ -82,6 +82,6 @@ class OOVTokenizer(Tokenizer):
                         vect.append(i)
                 else:
                     vect.append(self.oov_token)
-                count+=1
-                print("tokenizing %s / %s" % (count, length), end='\r')
+            count+=1
+            print("tokenizing %s / %s" % (count, length), end='\r')
             yield vect
