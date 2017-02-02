@@ -65,7 +65,7 @@ You can run the preprocessing script like this:
 
 ```bash
 # Only produce data for Ruby projects
-./preprocess.py --prefix=ruby --validation_split=0.1 --vocabulary_size 20000 --max_sequence_length 200
+./preprocess.py --prefix=ruby --langs=ruby --validation_split=0.1 --vocabulary_size 20000 --max_sequence_length 200
 ```
 
 #### Training
