@@ -31,6 +31,8 @@ x_train = pickle.load(open(x_train_file % args.prefix))
 y_train = pickle.load(open(y_train_file % args.prefix))
 x_val = pickle.load(open(x_val_file % args.prefix))
 y_val = pickle.load(open(y_val_file % args.prefix))
+x_test = pickle.load(open(x_test_file % args.prefix))
+y_test = pickle.load(open(y_test_file % args.prefix))
 config = pickle.load(open(config_file % args.prefix))
 
 print("Training on %d merged, %d unmerged PRs" % (y_train[y_train == 1].size,
@@ -45,7 +47,7 @@ model.add(LSTM(args.lstm_output, consume_less='gpu', dropout_W=args.dropout, dro
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
-optimizer = RMSprop(lr = 0.005)
+optimizer = RMSprop(lr=0.005)
 
 model.compile(loss='binary_crossentropy',
               optimizer=optimizer,
@@ -65,6 +67,6 @@ if args.checkpoint:
 model.fit(x_train, y_train, batch_size=args.batch_size, nb_epoch=args.epochs,
           validation_data=(x_val, y_val), callbacks=callbacks)
 
-score, acc = model.evaluate(x_val, y_val, batch_size=args.batch_size)
+score, acc = model.evaluate(x_test, y_test, batch_size=args.batch_size)
 print('Test score:', score)
 print('Test accuracy:', acc)
