@@ -8,6 +8,7 @@ from __future__ import print_function
 
 import os
 import pickle
+import random
 import urllib
 import numpy as np
 import argparse
@@ -72,21 +73,24 @@ def balance(pullreqs, balance_ratio):
 
 
 @timeit
-def tokenize(texts, vocabulary_size, maxlen):
-    print("Tokenizing")
+def create_code_tokenizer(texts, vocabulary_size):
     tokenizer = CodeTokenizer(nb_words=vocabulary_size)
     tokenizer.fit_on_texts(texts)
-    sequences = tokenizer.texts_to_sequences(texts)
-
     word_index = tokenizer.word_index
     print('Found %s unique tokens.' % len(word_index))
+    return tokenizer
 
+
+@timeit
+def tokenize(tokenizer, texts, maxlen):
+    print("Tokenizing")
+    sequences = tokenizer.texts_to_sequences(texts)
     return pad_sequences(sequences, maxlen=maxlen)
 
 
 @timeit
 def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
-                   langs=[], validation_split=0.2, vocabulary_size=20000,
+                   langs=[], validation_split=0.1, test_split=0.2, vocabulary_size=20000,
                    maxlen=100):
     """
     Create a dataset for further processing
@@ -105,7 +109,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
 
     text_map = {}
     label_map = pd.DataFrame(columns=('project_name', 'github_id'))
-    files_read = files_examined =0
+    files_read = files_examined = 0
     project_names = set(pd.Series.unique(pullreqs['project_name']))
 
     for name in os.listdir(DIFFS_DIR):
@@ -134,7 +138,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
         except:
             pass
 
-        print("%s diffs examined, %s diffs matching" % (files_examined, files_read) , end='\r')
+        print("%s diffs examined, %s diffs matching" % (files_examined, files_read), end='\r')
 
     print("\nLoaded %s diffs" % len(text_map))
 
@@ -160,17 +164,28 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
             pass
         print("%s diffs loaded, %s diffs failed" % (successful, failed), end='\r')
 
+    texts_labels = list(zip(texts, labels))
+    random.shuffle(texts_labels)
+
+    nb_test_samples = int(test_split * len(texts_labels))
+
+    training_texts, training_labels = texts_labels[:-nb_test_samples]
+    test_texts, test_labels = zip(*texts_labels[-nb_test_samples:])
+
     print("")
-    tokens = tokenize(texts, vocabulary_size, maxlen)
-    labels = np.asarray(labels)
-    print('Shape of data tensor:', tokens.shape)
-    print('Shape of label tensor:', labels.shape)
+    tokenizer = create_code_tokenizer(training_texts, vocabulary_size)
+
+    # tokenize trainingset
+    training_tokens = tokenize(tokenizer, training_texts, maxlen)
+    training_labels = np.asarray(training_labels)
+    print('Shape of training_data tensor:', training_tokens.shape)
+    print('Shape of training_label tensor:', training_labels.shape)
 
     # Random selection split between training and testing
-    indices = np.arange(tokens.shape[0])
+    indices = np.arange(training_tokens.shape[0])
     np.random.shuffle(indices)
-    data = tokens[indices]
-    labels = labels[indices]
+    data = training_tokens[indices]
+    labels = training_labels[indices]
     nb_validation_samples = int(validation_split * data.shape[0])
 
     x_train = data[:-nb_validation_samples]
@@ -178,7 +193,18 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     x_val = data[-nb_validation_samples:]
     y_val = labels[-nb_validation_samples:]
 
+
+    # tokenize testset
+    test_tokens = tokenize(tokenizer, test_texts, maxlen)
+    test_labels = np.asarray(test_labels)
+
+    print('Shape of test_data tensor:', test_tokens.shape)
+    print('Shape of test_label tensor:', test_labels.shape)
+
     # Save dataset
+    with open(vocab_file % prefix, 'w') as f:
+        pickle.dump(tokenizer, f)
+
     with open(x_train_file % prefix, 'w') as f:
         pickle.dump(x_train, f)
 
@@ -190,6 +216,15 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
 
     with open(y_val_file % prefix, 'w') as f:
         pickle.dump(y_val, f)
+
+    with open(x_raw_test_file % prefix, 'w') as f:
+        pickle.dump(test_texts, f)
+
+    with open(x_test_file % prefix, 'w') as f:
+        pickle.dump(test_tokens, f)
+
+    with open(y_test_file % prefix, 'w') as f:
+        pickle.dump(test_labels, f)
 
     with open(config_file % prefix, 'w') as f:
         pickle.dump(config, f)
@@ -204,7 +239,8 @@ parser.add_argument('--prefix', default='default')
 parser.add_argument('--balance_ratio', type=float, default=1)
 parser.add_argument('--num_diffs', type=int, default=-1)
 parser.add_argument('--langs', nargs="*", default='')
-parser.add_argument('--validation_split', type=float, default=0.2)
+parser.add_argument('--validation_split', type=float, default=0.1)
+parser.add_argument('--test_split', type=float, default=0.2)
 parser.add_argument('--vocabulary_size', type=int, default=20000)
 parser.add_argument('--max_sequence_length', type=int, default=100)
 
@@ -212,5 +248,4 @@ args = parser.parse_args()
 
 if __name__ == '__main__':
     create_dataset(args.prefix, args.balance_ratio, args.num_diffs, args.langs,
-                   args.validation_split, args.vocabulary_size, args.max_sequence_length)
-
+                   args.validation_split, args.test_split, args.vocabulary_size, args.max_sequence_length)

@@ -27,6 +27,13 @@ x_train_file = os.path.join(DATASETS_DIR, 'x_train_%s.pcl')
 y_train_file = os.path.join(DATASETS_DIR, 'y_train_%s.pcl')
 x_val_file = os.path.join(DATASETS_DIR, 'x_val_%s.pcl')
 y_val_file = os.path.join(DATASETS_DIR, 'y_val_%s.pcl')
+
+x_raw_test_file = os.path.join(DATASETS_DIR, 'x_raw_test_%s.pcl')
+x_test_file = os.path.join(DATASETS_DIR, 'x_test_%s.pcl')
+y_test_file = os.path.join(DATASETS_DIR, 'y_test_%s.pcl')
+
+vocab_file = os.path.join(DATASETS_DIR, 'vocab_%s.pcl')
+
 config_file = os.path.join(DATASETS_DIR, 'config_%s.pcl')
 checkpoint_file = os.path.join(CHECKPOINT_DIR, 'checkpoint_%s.{epoch:02d}-{val_loss:.2f}.hdf5')
 
