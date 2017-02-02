@@ -47,7 +47,7 @@ model.add(LSTM(args.lstm_output, consume_less='gpu', dropout_W=args.dropout, dro
 model.add(Dense(1))
 model.add(Activation('sigmoid'))
 
-optimizer = RMSprop(lr=0.005)
+optimizer = RMSprop(lr=0.01)
 
 model.compile(loss='binary_crossentropy',
               optimizer=optimizer,
