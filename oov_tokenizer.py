@@ -76,11 +76,12 @@ class OOVTokenizer(Tokenizer):
                 i = self.word_index.get(w)
                 if i is not None:
                     if nb_words and i >= nb_words:
-                        vect.append(self.oov_token)
+                        continue
+                    #    vect.append(self.oov_token)
                     else:
                         vect.append(i)
-                else:
-                    vect.append(self.oov_token)
+                #else:
+                  #  vect.append(self.oov_token)
             count+=1
             print("tokenizing %s / %s" % (count, length), end='\r')
             yield vect
