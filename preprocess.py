@@ -227,7 +227,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
 
     print('Shape of label tensor:', tr_labels.shape)
 
-    # Random selection split between training and testing
+    # Random selection split between training and validation
     indices = np.arange(tr_diff_tokens.shape[0])
     np.random.shuffle(indices)
     data_diff = tr_diff_tokens[indices]
@@ -240,12 +240,12 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     diff_train = data_diff[:-nb_validation_samples]
     comment_train = data_comment[:-nb_validation_samples]
     title_train = data_title[:-nb_validation_samples]
-    y_train = labels[:-nb_validation_samples]
+    y_train = tr_labels[:-nb_validation_samples]
 
     diff_val = data_diff[-nb_validation_samples:]
     comment_val = data_comment[-nb_validation_samples:]
     title_val = data_title[-nb_validation_samples:]
-    y_val = labels[-nb_validation_samples:]
+    y_val = tr_labels[-nb_validation_samples:]
 
 
     diff_test = tokenize(code_tokenizer, te_diffs, max_diff_length)
