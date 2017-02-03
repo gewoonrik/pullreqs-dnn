@@ -108,12 +108,6 @@ if args.checkpoint:
 model.fit([diff_train, comment_train, title_train], [y_train, y_train, y_train, y_train], batch_size=args.batch_size, nb_epoch=args.epochs,
           validation_data=([diff_val, comment_val, title_val], [y_val, y_val, y_val, y_val]), callbacks=callbacks)
 
-[(main_score, main_acc), (diff_score, diff_acc), (comment_score, comment_acc), (title_score,title_acc)] = model.evaluate([diff_test, comment_test, title_test], [y_test,y_test,y_test, y_test], batch_size=args.batch_size)
-print('Test main score:', main_score)
-print('Test main accuracy:', main_acc)
-print('Test diff score:', diff_score)
-print('Test diff accuracy:', diff_acc)
-print('Test comment score:', comment_score)
-print('Test comment accuracy:', comment_acc)
-print('Test title score:', title_score)
-print('Test title accuracy:', title_acc)
+results = model.evaluate([diff_test, comment_test, title_test], [y_test,y_test,y_test, y_test], batch_size=args.batch_size)
+print('Test results: ', results)
+print('On metrics: ', model.metrics_names)
