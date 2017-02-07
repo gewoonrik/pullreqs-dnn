@@ -251,7 +251,7 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     diff_test = tokenize(code_tokenizer, te_diffs, max_diff_length)
     comment_test = tokenize(comment_tokenizer, te_comments, max_comment_length)
     title_test = tokenize(title_tokenizer, te_titles, max_title_length)
-    y_test = te_labels
+    y_test = np.asarray(te_labels)
 
     # Save dataset
     with open(diff_vocab_file % prefix, 'w') as f:
