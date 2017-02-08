@@ -66,6 +66,6 @@ if args.checkpoint:
 model.fit(x_train, y_train, batch_size=args.batch_size, nb_epoch=args.epochs,
           validation_data=(x_val, y_val), callbacks=callbacks)
 
-score, acc = model.evaluate(x_test, y_test, batch_size=args.batch_size)
-print('Test score:', score)
-print('Test accuracy:', acc)
+results = model.evaluate(x_test, y_test, batch_size=args.batch_size)
+print('Test results: ', results)
+print('On metrics: ', model.metrics_names)
