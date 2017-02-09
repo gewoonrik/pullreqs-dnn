@@ -75,54 +75,17 @@ def tokenize(tokenizer, texts, maxlen):
 
 
 def load_data(pullreqs):
-    text_map = {}
-    label_map = pd.DataFrame(columns=('project_name', 'github_id'))
-    files_read = files_examined =0
-    project_names = set(pd.Series.unique(pullreqs['project_name']))
-
-    for name in os.listdir(DIFFS_DIR):
-        files_examined += 1
-
-        try:
-            owner, repo, github_id = name.split('@')
-            project_name = "%s/%s" % (owner, repo)
-
-            if project_name not in project_names:
-                continue
-
-            github_id = github_id.split('.')[0]
-
-            statinfo = os.stat(os.path.join(DIFFS_DIR, name))
-            if statinfo.st_size == 0:
-                # Diff is zero size
-                continue
-
-            label_map = pd.concat([label_map, pd.DataFrame([[project_name, int(github_id)]],
-                                                           columns=('project_name', 'github_id'))])
-            text_map[name.split('.')[0]] = name
-            files_read += 1
-        except:
-            pass
-
-        print("%s diffs examined, %s diffs matching" % (files_examined, files_read) , end='\r')
-
-    print("\nLoaded %s diffs" % len(text_map))
-
-    label_map = pd.merge(label_map, pullreqs, how='left')[['project_name', 'github_id', 'merged']]
-    label_map['name'] = label_map[['project_name', 'github_id']].apply(
-        lambda x: "%s@%d" % (x[0].replace('/', '@'), x[1]),
-        axis=1)
-
-
     diffs = []
     titles = []
     comments = []
     labels = []
     successful = failed = 0
-    for i, row in label_map.iterrows():
+    for i, row in pullreqs.iterrows():
         try:
-            diff_file = os.path.join(DIFFS_DIR, text_map[row['name']])
-            comment_file = os.path.join(TXTS_DIR, text_map[row['name']].replace(".patch",".txt"))
+            name = (row['project_name']).replace('/','@')+"@"+str(row['github_id'])+'.patch'
+
+            diff_file = os.path.join(DIFFS_DIR, name)
+            comment_file = os.path.join(TXTS_DIR, name.replace(".patch",".txt"))
 
             diff = open(diff_file).read()
             title, comment = read_title_and_comments(comment_file)
