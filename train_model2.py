@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# (c) 2016 -- onwards Georgios Gousios <gousiosg@gmail.com>
+# (c) 2016 -- onwards Georgios Gousios <gousiosg@gmail.com>, Rik Nijessen <riknijessen@gmail.com>
 #
 
 
@@ -9,8 +9,8 @@ import pickle
 import json
 
 from keras.models import Model
-from keras.layers import Input, Dense, merge, LSTM, Embedding
-from keras.layers import LSTM, Dense, Activation, Embedding, Bidirectional
+from keras.layers import Input, merge
+from keras.layers import LSTM, Dense, Embedding
 from keras.optimizers import RMSprop
 from keras.callbacks import CSVLogger, EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 
@@ -18,19 +18,16 @@ from config import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--prefix', default='default')
-parser.add_argument('--batch_size', type=int, default=64)
+parser.add_argument('--batch_size', type=int, default=150)
 parser.add_argument('--epochs', type=int, default=10)
 parser.add_argument('--dropout', type=float, default=0.2)
-parser.add_argument('--lstm_diff_output', type=int, default=256)
-parser.add_argument('--lstm_title_output', type=int, default=256)
-parser.add_argument('--lstm_comment_output', type=int, default=256)
-parser.add_argument('--diff_embedding_output', type=int, default=512)
-parser.add_argument('--title_embedding_output', type=int, default=512)
-parser.add_argument('--comment_embedding_output', type=int, default=512)
+parser.add_argument('--lstm_diff_output', type=int, default=300)
+parser.add_argument('--lstm_title_output', type=int, default=300)
+parser.add_argument('--lstm_comment_output', type=int, default=300)
+parser.add_argument('--diff_embedding_output', type=int, default=500)
+parser.add_argument('--title_embedding_output', type=int, default=250)
+parser.add_argument('--comment_embedding_output', type=int, default=500)
 parser.add_argument('--checkpoint', type=bool, default=False)
-parser.add_argument('--max_diff_sequence_length', type=int, default=100)
-parser.add_argument('--max_title_sequence_length', type=int, default=100)
-parser.add_argument('--max_comment_sequence_length', type=int, default=100)
 
 args = parser.parse_args()
 
@@ -60,18 +57,18 @@ print json.dumps(config, indent=1)
 
 
 diff_input = Input(shape=(config['max_diff_length'],), dtype='int32', name='diff_input')
-diff_embedding = Embedding(config['diff_vocabulary_size']+1, args.diff_embedding_output, dropout=args.dropout)(diff_input)
+diff_embedding = Embedding(config['diff_vocabulary_size'], args.diff_embedding_output, dropout=args.dropout)(diff_input)
 diff_lstm = LSTM(args.lstm_diff_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(diff_embedding)
 diff_auxiliary_output = Dense(1, activation='sigmoid', name='diff_aux_output')(diff_lstm)
 
 
 comment_input = Input(shape=(config['max_comment_length'],), dtype='int32', name='comment_input')
-comment_embedding = Embedding(config['comment_vocabulary_size']+1, args.comment_embedding_output, dropout=args.dropout)(comment_input)
+comment_embedding = Embedding(config['comment_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout)(comment_input)
 comment_lstm = LSTM(args.lstm_comment_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(comment_embedding)
 comment_auxiliary_output = Dense(1, activation='sigmoid', name='comment_aux_output')(comment_lstm)
 
 title_input = Input(shape=(config['max_title_length'],), dtype='int32', name='title_input')
-title_embedding = Embedding(config['title_vocabulary_size']+1, args.comment_embedding_output, dropout=args.dropout)(title_input)
+title_embedding = Embedding(config['title_vocabulary_size'], args.comment_embedding_output, dropout=args.dropout)(title_input)
 title_lstm = LSTM(args.lstm_title_output, consume_less='gpu', dropout_W=args.dropout, dropout_U=args.dropout)(title_embedding)
 title_auxiliary_output = Dense(1, activation='sigmoid', name='title_aux_output')(title_lstm)
 
@@ -95,14 +92,14 @@ model.compile(loss='binary_crossentropy',
             loss_weights=[1., 0.3, 0.1, 0.1])
 
 print('Train...')
-csv_logger = CSVLogger('traininglog_%s.csv' % args.prefix)
+csv_logger = CSVLogger('traininglog_%s_model2.csv' % args.prefix)
 early_stopping = EarlyStopping(monitor='val_loss', patience=5)
 reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=3, min_lr=0.001)
 
 callbacks = [csv_logger, early_stopping, reduce_lr]
 
 if args.checkpoint:
-    checkpoint = ModelCheckpoint(checkpoint_file % args.prefix, monitor='val_loss')
+    checkpoint = ModelCheckpoint(checkpoint_file_2 % args.prefix, monitor='val_loss')
     callbacks.append(checkpoint)
 
 model.fit([diff_train, comment_train, title_train], [y_train, y_train, y_train, y_train], batch_size=args.batch_size, nb_epoch=args.epochs,

@@ -1,5 +1,5 @@
 from keras.preprocessing.text import Tokenizer, maketrans
-from oov_tokenizer import OOVTokenizer
+from my_tokenizer import MyTokenizer
 # we do not want to filter anything in code.
 def base_code_filter():
     return ""
@@ -7,7 +7,7 @@ def base_code_filter():
 
 
 # this class overrides methods to be able to use the text_to_word_sequence function above.
-class CodeTokenizer(OOVTokenizer):
+class CodeTokenizer(MyTokenizer):
     def text_to_word_sequence(self, text, filters=base_code_filter(), lower=True, split=" "):
         ''' Tokenizes code. All consecutive alphanumeric characters are grouped into one token.
         Thereby trying to heuristically match identifiers.

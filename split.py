@@ -1,9 +1,8 @@
 from __future__ import print_function
 
 import csv
-import numpy as np
 import argparse
-import random
+import urllib
 
 from config import *
 
@@ -13,10 +12,17 @@ def load_pr_csv(file):
     Load (download if needed) the original PR dataset, including all engineered features
     :return: A pandas dataframe with all data loaded
     """
-    print("Loading pull requests file ", file)
-    pullreqs = pd.read_csv(file)
+
+    if not os.path.exists(ORIG_DATA_FILE):
+        print("Downloading pull request data file")
+        urllib.urlretrieve(ORIG_DATA_URL, ORIG_DATA_FILE)
+
+    print("Loading pull requests file")
+    pullreqs = pd.read_csv(ORIG_DATA_FILE)
     pullreqs.set_index(['project_name', 'github_id'])
     return pullreqs
+
+
 
 def filter_langs(pullreqs, langs):
     """
@@ -66,6 +72,6 @@ print("training length ", len(train))
 print("validation length ", len(validation))
 print("test length ", len(test))
 
-train.to_csv("train_%s.csv" % args.prefix, quoting = csv.QUOTE_NONNUMERIC)
-validation.to_csv("validation_%s.csv" % args.prefix, quoting = csv.QUOTE_NONNUMERIC)
-test.to_csv("test_%s.csv" % args.prefix, quoting = csv.QUOTE_NONNUMERIC)
+train.to_csv(train_csv_file % args.prefix, quoting = csv.QUOTE_NONNUMERIC)
+validation.to_csv(validation_csv_file % args.prefix, quoting = csv.QUOTE_NONNUMERIC)
+test.to_csv(test_csv_file % args.prefix, quoting = csv.QUOTE_NONNUMERIC)

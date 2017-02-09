@@ -8,8 +8,8 @@ def base_filter():
     f += '\t\n'
     return f
 
-# a tokenizer that supports out of vocabulary tokens
-class OOVTokenizer(Tokenizer):
+# tokenizer that supports overriding text_to_word_sequence
+class MyTokenizer(Tokenizer):
 
 
     # this is added to the class to support overriding in subclasses, like the code tokenizer
@@ -50,7 +50,7 @@ class OOVTokenizer(Tokenizer):
         # note that index 0 is reserved, never assigned to an existing word
         self.word_index = dict(list(zip(sorted_voc, list(range(1, len(sorted_voc) + 1)))))
 
-        self.oov_token = len(sorted_voc) + 1
+        #self.oov_token = len(sorted_voc) + 1
 
         self.index_docs = {}
         for w, c in list(self.word_docs.items()):
@@ -59,7 +59,6 @@ class OOVTokenizer(Tokenizer):
     def texts_to_sequences_generator(self, texts):
         '''Transforms each text in texts in a sequence of integers.
         Only top "nb_words" most frequent words will be taken into account.
-        Words that are not known by the tokenizer will be replaced by self.oov_token token.
 
         Yields individual sequences.
 
