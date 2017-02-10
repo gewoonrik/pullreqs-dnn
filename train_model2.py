@@ -75,11 +75,7 @@ title_auxiliary_output = Dense(1, activation='sigmoid', name='title_aux_output')
 
 merged = merge([diff_lstm, comment_lstm, title_lstm], mode='concat')
 
-dense = Dense(128, activation='relu')(merged)
-dense = Dense(128, activation='relu')(dense)
-dense = Dense(128, activation='relu')(dense)
-
-main_output = Dense(1, activation='sigmoid', name='main_output')(dense)
+main_output = Dense(1, activation='sigmoid', name='main_output')(merged)
 
 model = Model(input=[diff_input, comment_input, title_input], output=[main_output, diff_auxiliary_output, comment_auxiliary_output, title_auxiliary_output])
 
