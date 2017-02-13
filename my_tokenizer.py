@@ -1,5 +1,4 @@
 from __future__ import print_function
-
 from keras.preprocessing.text import Tokenizer, maketrans
 import string
 
@@ -9,8 +8,8 @@ def base_filter():
     f += '\t\n'
     return f
 
-# a tokenizer that supports out of vocabulary tokens
-class OOVTokenizer(Tokenizer):
+# tokenizer that supports overriding text_to_word_sequence
+class MyTokenizer(Tokenizer):
 
 
     # this is added to the class to support overriding in subclasses, like the code tokenizer
@@ -51,7 +50,7 @@ class OOVTokenizer(Tokenizer):
         # note that index 0 is reserved, never assigned to an existing word
         self.word_index = dict(list(zip(sorted_voc, list(range(1, len(sorted_voc) + 1)))))
 
-        self.oov_token = len(sorted_voc) + 1
+        #self.oov_token = len(sorted_voc) + 1
 
         self.index_docs = {}
         for w, c in list(self.word_docs.items()):
@@ -60,7 +59,6 @@ class OOVTokenizer(Tokenizer):
     def texts_to_sequences_generator(self, texts):
         '''Transforms each text in texts in a sequence of integers.
         Only top "nb_words" most frequent words will be taken into account.
-        Words that are not known by the tokenizer will be replaced by self.oov_token token.
 
         Yields individual sequences.
 
@@ -77,11 +75,12 @@ class OOVTokenizer(Tokenizer):
                 i = self.word_index.get(w)
                 if i is not None:
                     if nb_words and i >= nb_words:
-                        vect.append(self.oov_token)
+                        continue
+                    #    vect.append(self.oov_token)
                     else:
                         vect.append(i)
-                else:
-                    vect.append(self.oov_token)
+                #else:
+                  #  vect.append(self.oov_token)
             count+=1
             print("tokenizing %s / %s" % (count, length), end='\r')
             yield vect

@@ -6,7 +6,6 @@
 
 from __future__ import print_function
 
-import os
 import pickle
 import random
 import urllib
@@ -15,21 +14,18 @@ import argparse
 
 from config import *
 from code_tokenizer import CodeTokenizer
+from my_tokenizer import MyTokenizer
 from keras.preprocessing.sequence import pad_sequences
 
 
 @timeit
-def load_pr_csv():
+def load_pr_csv(file):
     """
-    Load (download if needed) the original PR dataset, including all engineered features
+    Load a PR dataset, including all engineered features
     :return: A pandas dataframe with all data loaded
     """
-    if not os.path.exists(ORIG_DATA_FILE):
-        print("Downloading pull request data file")
-        urllib.urlretrieve(ORIG_DATA_URL, ORIG_DATA_FILE)
-
-    print("Loading pull requests file")
-    pullreqs = pd.read_csv(ORIG_DATA_FILE)
+    print("Loading pull requests file ", file)
+    pullreqs = pd.read_csv(file)
     pullreqs.set_index(['project_name', 'github_id'])
     return pullreqs
 
@@ -48,33 +44,24 @@ def ensure_diffs():
         tar.close()
 
 
-def filter_langs(pullreqs, langs):
-    """
-    Apply a language filter on the pullreqs dataframe
-    """
-    if len(langs) > 0:
-        print("Filtering out pull requests not in %s" % langs)
-        pullreqs = pullreqs[pullreqs['lang'].str.lower().isin([x.lower() for x in langs])]
-
-    return pullreqs
-
-
-def balance(pullreqs, balance_ratio):
-    """
-    Balance the dataset between merged and unmerged pull requests
-    """
-    unmerged = pullreqs[pullreqs['merged'] == False]
-    if len(unmerged) == 0:
-        raise Exception("No unmerged pull requests in filtered dataset")
-
-    merged = pullreqs[pullreqs['merged'] == True].sample(n=(len(unmerged) * balance_ratio))
-
-    return pd.concat([unmerged, merged]).sample(frac=1)
-
+def read_title_and_comments(file):
+    str = open(file).read()
+    splitted = str.split("\n")
+    title = splitted[0]
+    # remove title and empty space
+    comment = str[2:]
+    return title, comment
 
 @timeit
-def create_code_tokenizer(texts, vocabulary_size):
+def create_code_tokenizer(code, vocabulary_size):
     tokenizer = CodeTokenizer(nb_words=vocabulary_size)
+    tokenizer.fit_on_texts(code)
+    word_index = tokenizer.word_index
+    print('Found %s unique tokens.' % len(word_index))
+    return tokenizer
+
+def create_text_tokenizer(texts, vocabulary_size):
+    tokenizer = MyTokenizer(nb_words=vocabulary_size)
     tokenizer.fit_on_texts(texts)
     word_index = tokenizer.word_index
     print('Found %s unique tokens.' % len(word_index))
@@ -88,75 +75,25 @@ def tokenize(tokenizer, texts, maxlen):
     return pad_sequences(sequences, maxlen=maxlen)
 
 
-@timeit
-def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
-                   langs=[], validation_split=0.1, test_split=0.2, vocabulary_size=20000,
-                   maxlen=100):
-    """
-    Create a dataset for further processing
-    :param prefix: Name for the dataset
-    :param balance_ratio: The ratio between merged and unmerged PRs to include
-    :param num_diffs: Total number of diffs to load. Any value below 1 means load all diffs.
-    :param langs: Only include PRs for repos whose primary language is within this array
-    :param vocabulary_size: (Max) size of the vocabulary to use for tokenizing
-    :param maxlen: Maximum length of the input sequences
-    :return: A training and testing dataset, along with the config used to produce it
-    """
-    config = locals()
-
-    pullreqs = filter_langs(load_pr_csv(), langs)
-    ensure_diffs()
-
-    text_map = {}
-    label_map = pd.DataFrame(columns=('project_name', 'github_id'))
-    files_read = files_examined = 0
-    project_names = set(pd.Series.unique(pullreqs['project_name']))
-
-    for name in os.listdir(DIFFS_DIR):
-        files_examined += 1
-        if num_diffs > 0 and files_read >= num_diffs:
-            break
-
-        try:
-            owner, repo, github_id = name.split('@')
-            project_name = "%s/%s" % (owner, repo)
-
-            if project_name not in project_names:
-                continue
-
-            github_id = github_id.split('.')[0]
-
-            statinfo = os.stat(os.path.join(DIFFS_DIR, name))
-            if statinfo.st_size == 0:
-                # Diff is zero size
-                continue
-
-            label_map = pd.concat([label_map, pd.DataFrame([[project_name, int(github_id)]],
-                                                           columns=('project_name', 'github_id'))])
-            text_map[name.split('.')[0]] = os.path.join(DIFFS_DIR, name)
-            files_read += 1
-        except:
-            pass
-
-        print("%s diffs examined, %s diffs matching" % (files_examined, files_read), end='\r')
-
-    print("\nLoaded %s diffs" % len(text_map))
-
-    label_map = pd.merge(label_map, pullreqs, how='left')[['project_name', 'github_id', 'merged']]
-    label_map['name'] = label_map[['project_name', 'github_id']].apply(
-        lambda x: "%s@%d" % (x[0].replace('/', '@'), x[1]),
-        axis=1)
-
-    # Balancing the dataset
-    label_map = balance(label_map, balance_ratio)
-    print("After balancing: %s diffs" % len(label_map))
-
-    texts = []
+def load_data(pullreqs):
+    diffs = []
+    titles = []
+    comments = []
     labels = []
     successful = failed = 0
-    for i, row in label_map.iterrows():
+    for i, row in pullreqs.iterrows():
         try:
-            texts.append(open(text_map[row['name']]).read())
+            name = (row['project_name']).replace('/','@')+"@"+str(row['github_id'])+'.patch'
+
+            diff_file = os.path.join(DIFFS_DIR, name)
+            comment_file = os.path.join(TXTS_DIR, name.replace(".patch",".txt"))
+
+            diff = open(diff_file).read()
+            title, comment = read_title_and_comments(comment_file)
+
+            diffs.append(diff)
+            titles.append(title)
+            comments.append(comment)
             labels.append(int(row['merged'] * 1))
             successful += 1
         except:
@@ -164,34 +101,74 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
             pass
         print("%s diffs loaded, %s diffs failed" % (successful, failed), end='\r')
 
-    texts_labels = list(zip(texts, labels))
-    random.shuffle(texts_labels)
-
-    nb_test_samples = int(test_split * len(texts_labels))
-
-    training_texts, training_labels = zip(*texts_labels[:-nb_test_samples])
-    test_texts, test_labels = zip(*texts_labels[-nb_test_samples:])
-
     print("")
-    tokenizer = create_code_tokenizer(training_texts, vocabulary_size)
+    return diffs, comments, titles, labels
 
-    # tokenize trainingset
-    training_tokens = tokenize(tokenizer, training_texts, maxlen)
-    training_labels = np.asarray(training_labels)
-    print('Shape of training_data tensor:', training_tokens.shape)
-    print('Shape of training_label tensor:', training_labels.shape)
 
-    # Random selection split between training and testing
-    indices = np.arange(training_tokens.shape[0])
-    np.random.shuffle(indices)
-    data = training_tokens[indices]
-    labels = training_labels[indices]
-    nb_validation_samples = int(validation_split * data.shape[0])
+@timeit
+def create_dataset(prefix="default",
+                   diff_vocabulary_size=20000,
+                   comment_vocabulary_size=20000,
+                   title_vocabulary_size=20000,
+                   max_diff_length=100,
+                   max_comment_length=100,
+                   max_title_length=100):
+    """
+    Create a dataset for further processing
+    :param prefix: Name for the dataset
+    :param balance_ratio: The ratio between merged and unmerged PRs to include
+    :param num_diffs: Total number of diffs to load. Any value below 1 means load all diffs.
+    :param langs: Only include PRs for repos whose primary language is within this array
+    :param diff_vocabulary_size: (Max) size of the diff vocabulary to use for tokenizing
+    :param comment_vocabulary_size: (Max) size of the comment vocabulary to use for tokenizing
+    :param title_vocabulary_size: (Max) size of the title vocabulary to use for tokenizing
+    :param max_diff_length: Maximum length of the input diff sequences
+    :param max_comment_length: Maximum length of the input comment sequences
+    :param max_title_length: Maximum length of the input title sequences
+    :return: A training and testing dataset, along with the config used to produce it
+    """
+    config = locals()
 
-    x_train = data[:-nb_validation_samples]
-    y_train = labels[:-nb_validation_samples]
-    x_val = data[-nb_validation_samples:]
-    y_val = labels[-nb_validation_samples:]
+    pullreqs_train = load_pr_csv(train_csv_file % prefix)
+    pullreqs_test = load_pr_csv(test_csv_file % prefix)
+    pullreqs_validation = load_pr_csv(validation_csv_file % prefix)
+
+    ensure_diffs()
+
+    tr_diffs, tr_comments, tr_titles, tr_labels = load_data(pullreqs_train)
+    val_diffs, val_comments, val_titles, val_labels = load_data(pullreqs_validation)
+    te_diffs, te_comments, te_titles, te_labels = load_data(pullreqs_test)
+
+    code_tokenizer = create_code_tokenizer(tr_diffs+val_diffs, diff_vocabulary_size)
+
+    diff_train = tokenize(code_tokenizer, tr_diffs, max_diff_length)
+    diff_val = tokenize(code_tokenizer, val_diffs, max_diff_length)
+    diff_test = tokenize(code_tokenizer, te_diffs, max_diff_length)
+
+    comment_tokenizer = create_text_tokenizer(tr_comments+val_comments, comment_vocabulary_size)
+
+    comment_train = tokenize(comment_tokenizer, tr_comments, max_comment_length)
+    comment_val = tokenize(code_tokenizer, val_comments, max_comment_length)
+    comment_test = tokenize(comment_tokenizer, te_comments, max_comment_length)
+
+    title_tokenizer = create_text_tokenizer(tr_titles+val_titles, title_vocabulary_size)
+
+    title_train = tokenize(title_tokenizer, tr_titles, max_title_length)
+    title_val = tokenize(code_tokenizer, val_titles, max_title_length)
+    title_test = tokenize(title_tokenizer, te_titles, max_title_length)
+
+
+    y_train = np.asarray(tr_labels)
+    y_val = np.asarray(val_labels)
+    y_test = np.asarray(te_labels)
+
+
+    print('Shape of diff tensor:', diff_train.shape)
+    print('Shape of comment tensor:', comment_train.shape)
+    print('Shape of title tensor:', title_train.shape)
+    print('Shape of label tensor:', y_train.shape)
+
+
 
 
     # tokenize testset
@@ -202,50 +179,71 @@ def create_dataset(prefix="default", balance_ratio=1, num_diffs=-1,
     print('Shape of test_label tensor:', test_labels.shape)
 
     # Save dataset
-    with open(vocab_file % prefix, 'w') as f:
-        pickle.dump(tokenizer, f)
+    with open(diff_vocab_file % prefix, 'w') as f:
+        pickle.dump(code_tokenizer, f)
 
-    with open(x_train_file % prefix, 'w') as f:
-        pickle.dump(x_train, f)
+    with open(comment_vocab_file % prefix, 'w') as f:
+        pickle.dump(comment_tokenizer, f)
+
+    with open(title_vocab_file % prefix, 'w') as f:
+        pickle.dump(title_tokenizer, f)
+
+    with open(diff_train_file % prefix, 'w') as f:
+        pickle.dump(diff_train, f)
+
+    with open(comment_train_file % prefix, 'w') as f:
+        pickle.dump(comment_train, f)
+
+    with open(title_train_file % prefix, 'w') as f:
+        pickle.dump(title_train, f)
 
     with open(y_train_file % prefix, 'w') as f:
         pickle.dump(y_train, f)
 
-    with open(x_val_file % prefix, 'w') as f:
-        pickle.dump(x_val, f)
+    with open(diff_val_file % prefix, 'w') as f:
+        pickle.dump(diff_val, f)
+
+    with open(comment_val_file % prefix, 'w') as f:
+        pickle.dump(comment_val, f)
+
+    with open(title_val_file % prefix, 'w') as f:
+        pickle.dump(title_val, f)
 
     with open(y_val_file % prefix, 'w') as f:
         pickle.dump(y_val, f)
 
-    with open(x_raw_test_file % prefix, 'w') as f:
-        pickle.dump(test_texts, f)
+    # save testdata
+    with open(diff_test_file % prefix, 'w') as f:
+        pickle.dump(diff_test, f)
 
-    with open(x_test_file % prefix, 'w') as f:
-        pickle.dump(test_tokens, f)
+    with open(comment_test_file % prefix, 'w') as f:
+        pickle.dump(comment_test, f)
+
+
+    with open(title_test_file % prefix, 'w') as f:
+        pickle.dump(title_test, f)
 
     with open(y_test_file % prefix, 'w') as f:
-        pickle.dump(test_labels, f)
+        pickle.dump(y_test, f)
+
 
     with open(config_file % prefix, 'w') as f:
         pickle.dump(config, f)
 
-    return x_train, y_train, x_val, y_val, config
-
-
-np.random.seed(1337)
+    return diff_train, comment_train, title_train, y_train, diff_val, comment_val, title_val, y_val, diff_test, comment_test, title_test, y_test, config
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--prefix', default='default')
-parser.add_argument('--balance_ratio', type=float, default=1)
-parser.add_argument('--num_diffs', type=int, default=-1)
-parser.add_argument('--langs', nargs="*", default='')
-parser.add_argument('--validation_split', type=float, default=0.1)
-parser.add_argument('--test_split', type=float, default=0.2)
-parser.add_argument('--vocabulary_size', type=int, default=20000)
-parser.add_argument('--max_sequence_length', type=int, default=100)
+parser.add_argument('--diff_vocabulary_size', type=int, default=50000)
+parser.add_argument('--comment_vocabulary_size', type=int, default=50000)
+parser.add_argument('--title_vocabulary_size', type=int, default=10000)
+parser.add_argument('--max_diff_sequence_length', type=int, default=150)
+parser.add_argument('--max_comment_sequence_length', type=int, default=150)
+parser.add_argument('--max_title_sequence_length', type=int, default=150)
+
 
 args = parser.parse_args()
 
 if __name__ == '__main__':
-    create_dataset(args.prefix, args.balance_ratio, args.num_diffs, args.langs,
-                   args.validation_split, args.test_split, args.vocabulary_size, args.max_sequence_length)
+    create_dataset(args.prefix, args.diff_vocabulary_size, args.comment_vocabulary_size, args.title_vocabulary_size, args.max_diff_sequence_length, args.max_comment_sequence_length, args.max_title_sequence_length)
+
