@@ -7,6 +7,7 @@
 from __future__ import print_function
 
 import pickle
+import random
 import urllib
 import numpy as np
 import argparse
@@ -156,6 +157,7 @@ def create_dataset(prefix="default",
     title_val = tokenize(code_tokenizer, val_titles, max_title_length)
     title_test = tokenize(title_tokenizer, te_titles, max_title_length)
 
+
     y_train = np.asarray(tr_labels)
     y_val = np.asarray(val_labels)
     y_test = np.asarray(te_labels)
@@ -167,6 +169,14 @@ def create_dataset(prefix="default",
     print('Shape of label tensor:', y_train.shape)
 
 
+
+
+    # tokenize testset
+    test_tokens = tokenize(tokenizer, test_texts, maxlen)
+    test_labels = np.asarray(test_labels)
+
+    print('Shape of test_data tensor:', test_tokens.shape)
+    print('Shape of test_label tensor:', test_labels.shape)
 
     # Save dataset
     with open(diff_vocab_file % prefix, 'w') as f:
@@ -209,6 +219,7 @@ def create_dataset(prefix="default",
     with open(comment_test_file % prefix, 'w') as f:
         pickle.dump(comment_test, f)
 
+
     with open(title_test_file % prefix, 'w') as f:
         pickle.dump(title_test, f)
 
@@ -230,7 +241,9 @@ parser.add_argument('--max_diff_sequence_length', type=int, default=150)
 parser.add_argument('--max_comment_sequence_length', type=int, default=150)
 parser.add_argument('--max_title_sequence_length', type=int, default=150)
 
+
 args = parser.parse_args()
 
 if __name__ == '__main__':
     create_dataset(args.prefix, args.diff_vocabulary_size, args.comment_vocabulary_size, args.title_vocabulary_size, args.max_diff_sequence_length, args.max_comment_sequence_length, args.max_title_sequence_length)
+
