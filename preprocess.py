@@ -169,15 +169,6 @@ def create_dataset(prefix="default",
     print('Shape of label tensor:', y_train.shape)
 
 
-
-
-    # tokenize testset
-    test_tokens = tokenize(tokenizer, test_texts, maxlen)
-    test_labels = np.asarray(test_labels)
-
-    print('Shape of test_data tensor:', test_tokens.shape)
-    print('Shape of test_label tensor:', test_labels.shape)
-
     # Save dataset
     with open(diff_vocab_file % prefix, 'w') as f:
         pickle.dump(code_tokenizer, f)
